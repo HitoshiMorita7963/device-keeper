@@ -15,6 +15,8 @@ import {
   type DeviceStatusChangeInput,
   type DeviceUpdateInput,
 } from "@/lib/validation/devices";
+import { managementNameSchema, type ManagementNameInput } from "@/lib/validation/device-names";
+import { issueAgentToken, revokeAgentToken, updateManagementName } from "@/server/device-names";
 import { changeDeviceStatus, createDevice, deleteDevice, revealDeviceSecret, updateDevice, updateDeviceCredentials } from "@/server/devices";
 
 export async function createDeviceAction(input: DeviceCreateInput) {
@@ -67,4 +69,36 @@ export async function revealDeviceSecretAction(input: z.input<typeof revealSchem
     ok: true,
     data: { value: await revealDeviceSecret(id, field, ctx) },
   }));
+}
+
+export async function updateManagementNameAction(input: ManagementNameInput) {
+  return runAction("device:write", managementNameSchema, input, async (data, ctx) => {
+    const updated = await updateManagementName(data, ctx);
+    revalidatePath("/devices");
+    revalidatePath(`/devices/${updated.id}`);
+    return {
+      ok: true,
+      data: { id: updated.id, managementName: updated.managementName },
+      message: updated.managementName ? `管理用端末名を「${updated.managementName}」に変更しました。` : "管理用端末名を未設定に戻しました。",
+    };
+  });
+}
+
+const deviceIdSchema = z.object({ id: z.number().int().positive() });
+
+/** 端末連携キーを発行する (管理者のみ)。キーはこの応答でのみ返し、以降は表示できない */
+export async function issueAgentTokenAction(input: { id: number }) {
+  return runAction("device:secret", deviceIdSchema, input, async ({ id }, ctx) => {
+    const { token } = await issueAgentToken(id, ctx);
+    revalidatePath(`/devices/${id}`);
+    return { ok: true, data: { token } };
+  });
+}
+
+export async function revokeAgentTokenAction(input: { id: number }) {
+  return runAction("device:secret", deviceIdSchema, input, async ({ id }, ctx) => {
+    await revokeAgentToken(id, ctx);
+    revalidatePath(`/devices/${id}`);
+    return { ok: true, data: { id }, message: "端末連携キーを無効にしました。この端末からの PC 名の送信は受け付けられなくなります。" };
+  });
 }

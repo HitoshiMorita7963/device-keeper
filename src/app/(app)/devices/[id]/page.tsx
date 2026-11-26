@@ -17,6 +17,8 @@ import { formatDate, formatDateTime, todayJst } from "@/lib/dates";
 import { actionLabel, MAINTENANCE_STATUS_LABELS } from "@/lib/labels";
 import { idParam } from "@/lib/validation/common";
 import { deviceSecretStatus, getDeviceDetail } from "@/server/devices";
+import { ManagementName } from "@/components/management-name";
+import { AgentTokenControls, ManagementNameDialog } from "../device-name-dialogs";
 import { OPEN_MAINTENANCE } from "@/server/maintenance";
 import { CredentialsCard } from "./credentials-card";
 import { DeleteDeviceDialog, StatusChangeDialog } from "./device-dialogs";
@@ -37,6 +39,7 @@ export default async function DeviceDetailPage({ params }: PageProps<"/devices/[
   const canWrite = can(user.role, "device:write") && !disposed;
   const hasHistory = assignments.length + moves.length + maintenance.length > 0;
   const canAssign = can(user.role, "assignment:write") && !disposed;
+  const canManageAgent = can(user.role, "device:secret") && !disposed;
   const openMaintenance = maintenance.find((m) => OPEN_MAINTENANCE.includes(m.status));
 
   return (
@@ -132,8 +135,77 @@ export default async function DeviceDetailPage({ params }: PageProps<"/devices/[
         </Alert>
       ) : null}
 
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-3">
+            <div className="min-w-0">
+              <div className="text-xs text-muted-foreground">端末番号</div>
+              <div className="mt-0.5 font-mono text-sm">{device.assetNumber}</div>
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                PC名
+                <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">
+                  自動取得
+                </Badge>
+              </div>
+              <div className="mt-0.5 text-sm">
+                {device.computerName ? (
+                  <span className="font-mono">{device.computerName}</span>
+                ) : (
+                  <span className="text-muted-foreground">未取得</span>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                最終取得: {device.computerNameUpdatedAt ? formatDateTime(device.computerNameUpdatedAt) : "-"}
+              </div>
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                管理用端末名
+                <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">
+                  手動設定
+                </Badge>
+              </div>
+              <div className="mt-0.5 text-sm">
+                <ManagementName managementName={device.managementName} computerName={device.computerName} />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                最終更新:{" "}
+                {device.managementNameUpdatedAt
+                  ? `${formatDateTime(device.managementNameUpdatedAt)} (${device.managementNameUpdatedBy?.displayName ?? "-"})`
+                  : "-"}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            PC名は Windows 端末の取得スクリプトが自動で登録する名前で、管理画面からは変更できません。管理用端末名は管理者が自由に付けられる名前です。
+          </p>
+          {canWrite || canManageAgent ? (
+            <div className="flex flex-wrap items-center gap-2 border-t pt-4">
+              {canWrite ? (
+                <ManagementNameDialog
+                  deviceId={device.id}
+                  assetNumber={device.assetNumber}
+                  computerName={device.computerName}
+                  managementName={device.managementName}
+                />
+              ) : null}
+              {canManageAgent ? (
+                <>
+                  <AgentTokenControls deviceId={device.id} issuedAt={device.agentTokenIssuedAt?.toISOString() ?? null} />
+                  <span className="text-xs text-muted-foreground">
+                    端末連携キー: {device.agentTokenIssuedAt ? `発行済み (${formatDateTime(device.agentTokenIssuedAt)})` : "未発行"}
+                  </span>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="basic">
-        <TabsList className="h-auto flex-wrap">
+        <TabsList className="h-auto flex-wrap justify-start group-data-horizontal/tabs:h-auto">
           <TabsTrigger value="basic">基本情報</TabsTrigger>
           <TabsTrigger value="assignment">貸与情報</TabsTrigger>
           <TabsTrigger value="assignments">貸出履歴 ({assignments.length})</TabsTrigger>

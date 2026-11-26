@@ -4,10 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 // セッションの有効性と権限は各画面・Server Action 側 (src/lib/auth/session.ts) で必ず検証する。
 const SESSION_COOKIE = "dk_session";
 const PUBLIC_PATHS = ["/login"];
+/** 端末連携キーで認証する API (ログイン Cookie を使わない) */
+const DEVICE_API = /^\/api\/devices\/[^/]+\/computer-name$/;
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) || DEVICE_API.test(pathname)) {
     return NextResponse.next();
   }
   if (!request.cookies.has(SESSION_COOKIE)) {

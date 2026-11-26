@@ -5,7 +5,7 @@
 | 権限 | 内容 | 管理者 | IT資産管理担当者 | 一般社員 |
 |---|---|:-:|:-:|:-:|
 | `dashboard:view` | ダッシュボード | ○ | ○ | |
-| `device:read` / `device:write` | 端末の閲覧 / 登録・編集 | ○ / ○ | ○ / ○ | |
+| `device:read` / `device:write` | 端末の閲覧 / 登録・編集 (管理用端末名の編集を含む) | ○ / ○ | ○ / ○ | |
 | `employee:read` / `employee:write` | 社員の閲覧 / 登録・編集・退職処理 | ○ / ○ | ○ / | |
 | `location:read` / `location:write` | 拠点の閲覧 / 登録・編集 | ○ / ○ | ○ / | |
 | `master:write` | 部署・資産種別マスタの編集 | ○ | | |
@@ -13,7 +13,7 @@
 | `move:write` | 拠点間移動 | ○ | ○ | |
 | `maintenance:write` | 修理登録 | ○ | ○ | |
 | `disposal:write` | 廃棄処理 | ○ | | |
-| `device:secret` | 端末パスワードの表示・端末ログイン情報の変更 (表示は操作履歴に記録) | ○ | | |
+| `device:secret` | 端末パスワードの表示・端末ログイン情報の変更 (表示は操作履歴に記録)、端末連携キー (PC 名送信用) の発行・無効化 | ○ | | |
 | `csv:import` / `csv:export` | CSV インポート / エクスポート | ○ / ○ | ○ / ○ | |
 | `audit:read` | 操作履歴の閲覧 | ○ | ○ | |
 | `user:manage` | 利用者の登録・権限変更・無効化・パスワード再設定 | ○ | | |

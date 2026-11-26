@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,12 +11,14 @@ import { SearchBar, SearchSelect, SearchText } from "@/components/search-bar";
 import { can } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/session";
 import { WARRANTY_WARNING_DAYS } from "@/lib/dashboard";
-import { addDays, formatDate, todayJst } from "@/lib/dates";
+import { addDays, formatDate, formatDateTime, todayJst } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { DEVICE_STATUS_LABELS } from "@/lib/labels";
 import { currentPage, pickParams } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 import { DEVICE_SEARCH_KEYS, searchDevices } from "@/server/devices";
+import { ManagementName } from "@/components/management-name";
+import { ManagementNameDialog } from "./device-name-dialogs";
 
 export const metadata: Metadata = { title: "端末一覧" };
 
@@ -32,6 +34,7 @@ export default async function DevicesPage({ searchParams }: PageProps<"/devices"
   const today = todayJst();
   const warningLimit = addDays(today, WARRANTY_WARNING_DAYS);
   const canAssign = can(user.role, "assignment:write");
+  const canEditName = can(user.role, "device:write");
   const canMove = can(user.role, "move:write");
 
   return (
@@ -58,6 +61,7 @@ export default async function DevicesPage({ searchParams }: PageProps<"/devices"
         <SearchText name="name" label="資産名称" defaultValue={params.name} className="w-full sm:w-44" />
         <SearchText name="serial" label="シリアル番号" defaultValue={params.serial} className="w-full sm:w-40" />
         <SearchText name="hostname" label="ホスト名" defaultValue={params.hostname} className="w-full sm:w-36" />
+        <SearchText name="pcName" label="PC名・管理用端末名" defaultValue={params.pcName} className="w-full sm:w-44" />
         <SearchSelect name="category" label="資産種別" defaultValue={params.category} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
         <SearchText name="manufacturer" label="メーカー" defaultValue={params.manufacturer} className="w-full sm:w-36" />
         <SearchText name="user" label="利用者 (氏名・社員番号)" defaultValue={params.user} className="w-full sm:w-44" />
@@ -95,6 +99,9 @@ export default async function DevicesPage({ searchParams }: PageProps<"/devices"
               <TableHeader>
                 <TableRow>
                   <TableHead>資産管理番号</TableHead>
+                  <TableHead>PC名</TableHead>
+                  <TableHead>管理用端末名</TableHead>
+                  <TableHead>PC名の最終取得</TableHead>
                   <TableHead>資産名称</TableHead>
                   <TableHead>資産種別</TableHead>
                   <TableHead>メーカー</TableHead>
@@ -124,6 +131,32 @@ export default async function DevicesPage({ searchParams }: PageProps<"/devices"
                         <Link href={`/devices/${d.id}`} className="text-primary hover:underline">
                           {d.assetNumber}
                         </Link>
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        {d.computerName ?? <span className="font-sans text-muted-foreground">未取得</span>}
+                      </TableCell>
+                      <TableCell className="max-w-56">
+                        <span className="flex items-center gap-1">
+                          <span className="truncate">
+                            <ManagementName managementName={d.managementName} computerName={d.computerName} />
+                          </span>
+                          {canEditName && d.status !== "DISPOSED" ? (
+                            <ManagementNameDialog
+                              deviceId={d.id}
+                              assetNumber={d.assetNumber}
+                              computerName={d.computerName}
+                              managementName={d.managementName}
+                              trigger={
+                                <Button variant="ghost" size="icon-sm" aria-label={`${d.assetNumber} の管理用端末名を編集`}>
+                                  <Pencil aria-hidden />
+                                </Button>
+                              }
+                            />
+                          ) : null}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs tabular-nums text-muted-foreground">
+                        {d.computerNameUpdatedAt ? formatDateTime(d.computerNameUpdatedAt) : "-"}
                       </TableCell>
                       <TableCell className="max-w-56 truncate">
                         <Link href={`/devices/${d.id}`} className="hover:underline">

@@ -51,6 +51,17 @@ tests/                  unit/ 単体テスト, integration/ 実 DB を使う結�
 | フォント | OS 標準の日本語フォント | 外部フォント取得なしで社内ネットワークでもビルドできるように |
 | 端末パスワード | AES-256-GCM で暗号化して保存 (鍵は環境変数 `DEVICE_SECRET_KEY`)。Prisma クライアントの既定で暗号化列を取得しない設定にし、管理者の表示操作でのみ復号する | Excel 台帳の PW・PW2 を引き継ぐため。DB やバックアップが漏えいしてもパスワードは読めない |
 
+## PC名の自動取得
+
+- ブラウザの JavaScript からは Windows の PC 名を取得できないため、端末側の PowerShell スクリプト (`agent/windows/Send-ComputerName.ps1`) が API へ送信する
+- API: `POST /api/devices/{id}/computer-name` 本文 `{ "computerName": "DESKTOP-A8F3K2" }`、認証 `Authorization: Bearer <端末連携キー>`
+  - 200 `{ ok, deviceId, assetNumber, computerName, computerNameUpdatedAt, changed }` / 400 入力エラー / 401 キーなし・不正・無効 / 403 別の端末のキー / 404 端末なし / 409 廃棄済み / 413 本文が大きすぎる
+  - ログイン Cookie では受け付けない (`src/proxy.ts` のログイン画面への転送対象外)
+- 端末の特定: 端末連携キー (256bit 乱数、DB には SHA-256 のみ) で送信元の端末を特定し、URL の端末 ID と一致する場合のみ受け付ける。PC 名だけでは端末を特定しない
+- PC 名の形式: 先頭が英数字、英数字・ハイフン・アンダースコア、63 文字まで (サーバー側で検証。DB 操作は Prisma のパラメーター化クエリ)
+- 同じ PC 名の再送信は取得日時のみ更新し、PC 名が変わった場合のみ操作履歴に残す (定期実行による履歴の肥大化を防ぐ)
+- 既存の「ホスト名」(Excel 台帳から取り込んだ値・手入力) は残し、自動取得の「PC名」とは別の項目として扱う
+
 ## 追加したテーブル・カラム (指示書のデータベース設計からの差分)
 
 - `sessions`: ログインセッション
@@ -60,6 +71,9 @@ tests/                  unit/ 単体テスト, integration/ 実 DB を使う結�
 - `device_assignments.accessories_checked`: 返却時の付属品確認 (指示書 3.8 の入力項目)
 - `maintenance_records.previous_device_status`: 修理完了時に戻す端末状態
 - `users.display_name` / `failed_login_count` / `locked_until` / `last_login_at`: 表示名とログイン試行制限
+- `devices.computer_name` / `computer_name_updated_at`: 端末から自動取得した PC 名と最終取得日時
+- `devices.management_name` / `management_name_updated_at` / `management_name_updated_by`: 管理用端末名と最終更新日時・更新者 (users への外部キー)
+- `devices.agent_token_hash` / `agent_token_issued_at`: 端末連携キーのハッシュ (一意) と発行日時
 - `devices.hostname` / `purpose` / `cpu` / `memory` / `disk` / `home_loaned_at` / `recovery` / `initial_user` / `login_user` / `initial_password_enc` / `login_password_enc`: Excel 台帳の項目 (パスワードは暗号化)
 
 ## バックアップと復元

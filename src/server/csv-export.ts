@@ -37,6 +37,7 @@ async function devicesCsv(query: DeviceSearch, byLocation: boolean) {
     "利用者社員番号", "利用者氏名", "利用者部署", "貸出日", "返却予定日", "備考",
     // パスワードは出力しない (暗号化して保存し、管理者が画面でのみ確認する)
     "ホスト名", "用途", "CPU", "メモリ", "ディスク", "自宅貸出日", "リカバリ", "初期ユーザ", "ユーザー名",
+    "PC名 (自動取得)", "PC名の取得日時", "管理用端末名",
   ];
   const rows = devices.map((d) => {
     const open = d.assignments[0];
@@ -48,6 +49,7 @@ async function devicesCsv(query: DeviceSearch, byLocation: boolean) {
       d.currentEmployee?.employeeNumber, d.currentEmployee?.name, d.currentEmployee?.department?.name,
       date(open?.assignedAt), date(open?.expectedReturnAt), d.notes,
       d.hostname, d.purpose, d.cpu, d.memory, d.disk, date(d.homeLoanedAt), d.recovery, d.initialUser, d.loginUser,
+      d.computerName, d.computerNameUpdatedAt?.toISOString(), d.managementName,
     ];
   });
   return { csv: toCsv(headers, rows), count: rows.length };

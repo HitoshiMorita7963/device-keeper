@@ -144,51 +144,62 @@ model AssetNumberSequence {
 
 /// 端末台帳。deleted_at による論理削除のみ行う
 model Device {
-  id                 Int          @id @default(autoincrement())
-  assetNumber        String       @unique @map("asset_number")
-  name               String
-  categoryId         Int          @map("category_id")
-  manufacturer       String?
-  model              String?
-  serialNumber       String?      @map("serial_number")
-  osName             String?      @map("os_name")
-  osVersion          String?      @map("os_version")
-  purchaseDate       DateTime?    @map("purchase_date") @db.Date
-  purchasePrice      Int?         @map("purchase_price")
-  purchaseVendor     String?      @map("purchase_vendor")
-  warrantyExpiry     DateTime?    @map("warranty_expiry") @db.Date
-  currentLocationId  Int          @map("current_location_id")
+  id                        Int          @id @default(autoincrement())
+  assetNumber               String       @unique @map("asset_number")
+  name                      String
+  categoryId                Int          @map("category_id")
+  manufacturer              String?
+  model                     String?
+  serialNumber              String?      @map("serial_number")
+  osName                    String?      @map("os_name")
+  osVersion                 String?      @map("os_version")
+  purchaseDate              DateTime?    @map("purchase_date") @db.Date
+  purchasePrice             Int?         @map("purchase_price")
+  purchaseVendor            String?      @map("purchase_vendor")
+  warrantyExpiry            DateTime?    @map("warranty_expiry") @db.Date
+  currentLocationId         Int          @map("current_location_id")
   /// 現在の利用者 (貸出中のみ設定)。正は device_assignments の未返却レコード
-  currentEmployeeId  Int?         @map("current_employee_id")
-  status             DeviceStatus @default(IN_STOCK)
-  notes              String?
-  hostname           String?
+  currentEmployeeId         Int?         @map("current_employee_id")
+  status                    DeviceStatus @default(IN_STOCK)
+  notes                     String?
+  hostname                  String?
   /// 用途 (営業用・開発用など)
-  purpose            String?
-  cpu                String?
-  memory             String?
-  disk               String?
+  purpose                   String?
+  cpu                       String?
+  memory                    String?
+  disk                      String?
   /// 自宅への持ち帰り (在宅勤務用の貸出) を開始した日
-  homeLoanedAt       DateTime?    @map("home_loaned_at") @db.Date
+  homeLoanedAt              DateTime?    @map("home_loaned_at") @db.Date
   /// リカバリ (初期化) の実施状況などのメモ
-  recovery           String?
+  recovery                  String?
   /// 端末の初期ユーザー名 / 利用者用ユーザー名
-  initialUser        String?      @map("initial_user")
-  loginUser          String?      @map("login_user")
+  initialUser               String?      @map("initial_user")
+  loginUser                 String?      @map("login_user")
   /// 端末のパスワード。AES-256-GCM で暗号化して保存する (src/lib/crypto/secret.ts)。管理者のみ復号して表示できる
-  initialPasswordEnc String?      @map("initial_password_enc")
-  loginPasswordEnc   String?      @map("login_password_enc")
-  createdAt          DateTime     @default(now()) @map("created_at")
-  updatedAt          DateTime     @updatedAt @map("updated_at")
-  deletedAt          DateTime?    @map("deleted_at")
+  initialPasswordEnc        String?      @map("initial_password_enc")
+  loginPasswordEnc          String?      @map("login_password_enc")
+  /// Windows のコンピューター名 (COMPUTERNAME)。端末の取得スクリプトが送信し、管理画面からは変更しない
+  computerName              String?      @map("computer_name")
+  computerNameUpdatedAt     DateTime?    @map("computer_name_updated_at")
+  /// 管理者が自由に付ける管理用の端末名 (PC 名とは独立)
+  managementName            String?      @map("management_name")
+  managementNameUpdatedAt   DateTime?    @map("management_name_updated_at")
+  managementNameUpdatedById Int?         @map("management_name_updated_by")
+  /// 端末連携キー (PC 名の送信用) の SHA-256。キー本体は保存しない
+  agentTokenHash            String?      @unique @map("agent_token_hash")
+  agentTokenIssuedAt        DateTime?    @map("agent_token_issued_at")
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
+  deletedAt                 DateTime?    @map("deleted_at")
 
-  category        DeviceCategory          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  currentLocation Location                @relation(fields: [currentLocationId], references: [id], onDelete: Restrict)
-  currentEmployee Employee?               @relation("CurrentUser", fields: [currentEmployeeId], references: [id], onDelete: Restrict)
-  assignments     DeviceAssignment[]
-  locationHistory DeviceLocationHistory[]
-  maintenance     MaintenanceRecord[]
-  disposal        DisposalRecord?
+  category                DeviceCategory          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  currentLocation         Location                @relation(fields: [currentLocationId], references: [id], onDelete: Restrict)
+  currentEmployee         Employee?               @relation("CurrentUser", fields: [currentEmployeeId], references: [id], onDelete: Restrict)
+  assignments             DeviceAssignment[]
+  locationHistory         DeviceLocationHistory[]
+  maintenance             MaintenanceRecord[]
+  disposal                DisposalRecord?
+  managementNameUpdatedBy User?                   @relation("ManagementNameUpdatedBy", fields: [managementNameUpdatedById], references: [id], onDelete: SetNull)
 
   @@index([categoryId])
   @@index([currentLocationId])
@@ -315,13 +326,14 @@ model User {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  employee          Employee?               @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  sessions          Session[]
-  auditLogs         AuditLog[]
-  assignmentsMade   DeviceAssignment[]      @relation("AssignedBy")
-  assignmentsClosed DeviceAssignment[]      @relation("ReturnedBy")
-  moves             DeviceLocationHistory[] @relation("MovedBy")
-  disposals         DisposalRecord[]        @relation("DisposedBy")
+  employee               Employee?               @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  sessions               Session[]
+  auditLogs              AuditLog[]
+  assignmentsMade        DeviceAssignment[]      @relation("AssignedBy")
+  assignmentsClosed      DeviceAssignment[]      @relation("ReturnedBy")
+  moves                  DeviceLocationHistory[] @relation("MovedBy")
+  disposals              DisposalRecord[]        @relation("DisposedBy")
+  managementNamesUpdated Device[]                @relation("ManagementNameUpdatedBy")
 
   @@map("users")
 }

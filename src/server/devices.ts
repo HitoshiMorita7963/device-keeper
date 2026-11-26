@@ -160,7 +160,7 @@ export async function deleteDevice(data: DeleteData, ctx: OperationContext) {
     if (_count.assignments + _count.locationHistory + _count.maintenance > 0 || disposal) {
       throw new BusinessRuleError("貸与・移動・修理・廃棄の履歴がある端末は削除できません。不要になった端末は廃棄処理を行ってください。");
     }
-    const deleted = await tx.device.update({ where: { id: device.id }, data: { deletedAt: new Date() } });
+    const deleted = await tx.device.update({ where: { id: device.id }, data: { deletedAt: new Date(), agentTokenHash: null, agentTokenIssuedAt: null } });
     await recordAudit(tx, {
       userId: ctx.user.id,
       action: "DELETE",
@@ -182,6 +182,7 @@ export const DEVICE_SEARCH_KEYS = [
   "assetNumber",
   "name",
   "hostname",
+  "pcName",
   "serial",
   "category",
   "manufacturer",
@@ -207,6 +208,9 @@ export function deviceWhere(query: DeviceSearch, today = todayJst()): Prisma.Dev
   if (query.name?.trim()) and.push({ name: contains(query.name) });
   if (query.serial?.trim()) and.push({ serialNumber: contains(query.serial) });
   if (query.hostname?.trim()) and.push({ hostname: contains(query.hostname) });
+  if (query.pcName?.trim()) {
+    and.push({ OR: [{ computerName: contains(query.pcName) }, { managementName: contains(query.pcName) }] });
+  }
   if (query.manufacturer?.trim()) and.push({ manufacturer: contains(query.manufacturer) });
   if (Number(query.category) > 0) and.push({ categoryId: Number(query.category) });
   if (Number(query.location) > 0) and.push({ currentLocationId: Number(query.location) });
@@ -261,6 +265,7 @@ export async function getDeviceDetail(id: number) {
       currentLocation: true,
       currentEmployee: { include: { department: true } },
       disposal: { include: { disposedBy: { select: { displayName: true } } } },
+      managementNameUpdatedBy: { select: { displayName: true } },
     },
   });
   if (!device) return null;
