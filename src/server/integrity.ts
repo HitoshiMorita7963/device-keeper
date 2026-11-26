@@ -1,6 +1,5 @@
-import { db } from "@/lib/db";
+import { db, type AppPrismaClient } from "@/lib/db";
 import { DEVICE_STATUS_LABELS } from "@/lib/labels";
-import type { PrismaClient } from "@/generated/prisma/client";
 
 export type IntegrityIssue = {
   severity: "error" | "warning";
@@ -17,7 +16,7 @@ const OPEN_MAINTENANCE = new Set(["REPORTED", "IN_PROGRESS"]);
  * error: 業務処理の不具合や DB の直接編集などで生じた矛盾。warning: 運用上起こりうるが確認が必要な状態。
  * バックアップから復元した後の確認にも使う (scripts/check-integrity.ts)。
  */
-export async function checkIntegrity(client: Pick<PrismaClient, "device" | "employee"> = db): Promise<IntegrityIssue[]> {
+export async function checkIntegrity(client: Pick<AppPrismaClient, "device" | "employee"> = db): Promise<IntegrityIssue[]> {
   const issues: IntegrityIssue[] = [];
   const devices = await client.device.findMany({
     orderBy: { assetNumber: "asc" },

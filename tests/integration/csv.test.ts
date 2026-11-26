@@ -11,7 +11,7 @@ import { GET as exportRoute } from "@/app/api/csv/export/[type]/route";
 import { guessMapping, type ImportTarget } from "@/lib/csv/fields";
 import { todayJst, toDateInput } from "@/lib/dates";
 import { buildExport } from "@/server/csv-export";
-import type { ImportRequest } from "@/lib/validation/csv";
+import type { ImportRequestInput as ImportRequest } from "@/lib/validation/csv";
 import { createDevice, createUser, resetDb } from "../helpers/db";
 import { loginAs, logout } from "../helpers/request";
 
@@ -47,18 +47,21 @@ describe("CSV管理", () => {
           header,
           ["", "ノートPC A", "PC", "本社", "2026/04/01", "120,000", "", ""],
           ["PC-000100", "既存", "PC", "HQ", "", "", "", ""],
-          ["", "", "存在しない種別", "札幌", "2026-13-01", "abc", "廃棄済み", ""],
+          ["", "", "存在しない種別", "札幌", "2026-13-01", "abc", "不明な状態", ""],
           ["X-1", "重複1", "SP", "OSK", "", "", "", ""],
           ["x-1", "重複2", "SP", "OSK", "", "", "", ""],
+          ["", "廃棄した端末", "PC", "本社", "", "", "廃棄済み", ""],
         ]),
       );
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.summary).toMatchObject({ total: 5, create: 2, skip: 1, error: 2 });
-      expect(result.data.rows.map((r) => r.action)).toEqual(["create", "skip", "error", "create", "error"]);
+      expect(result.data.summary).toMatchObject({ total: 6, create: 2, skip: 2, error: 2 });
+      expect(result.data.rows.map((r) => r.action)).toEqual(["create", "skip", "error", "create", "error", "skip"]);
       const errors = result.data.rows[2].messages.join(" / ");
-      for (const text of ["資産名称", "存在しない種別", "札幌", "購入日", "購入金額", "廃棄済み"]) expect(errors).toContain(text);
+      for (const text of ["資産名称", "存在しない種別", "札幌", "購入日", "購入金額", "不明な状態"]) expect(errors).toContain(text);
       expect(result.data.rows[4].messages[0]).toContain("5 行目と重複");
+      // 廃棄済みの行は全体を止めずにスキップする
+      expect(result.data.rows[5].messages[0]).toContain("廃棄済み");
       expect(await db.device.count()).toBe(1);
     });
 

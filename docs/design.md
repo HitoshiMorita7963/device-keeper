@@ -49,6 +49,7 @@ tests/                  unit/ 単体テスト, integration/ 実 DB を使う結�
 | 削除 | 端末は `deleted_at` による論理削除。履歴テーブルは外部キー `RESTRICT` で物理削除不可 | データ整合性ルール 10 |
 | キャッシュ | Next.js の Cache Components は無効。全画面をリクエストごとに描画 | 業務データは常に最新を表示する必要があるため |
 | フォント | OS 標準の日本語フォント | 外部フォント取得なしで社内ネットワークでもビルドできるように |
+| 端末パスワード | AES-256-GCM で暗号化して保存 (鍵は環境変数 `DEVICE_SECRET_KEY`)。Prisma クライアントの既定で暗号化列を取得しない設定にし、管理者の表示操作でのみ復号する | Excel 台帳の PW・PW2 を引き継ぐため。DB やバックアップが漏えいしてもパスワードは読めない |
 
 ## 追加したテーブル・カラム (指示書のデータベース設計からの差分)
 
@@ -59,6 +60,7 @@ tests/                  unit/ 単体テスト, integration/ 実 DB を使う結�
 - `device_assignments.accessories_checked`: 返却時の付属品確認 (指示書 3.8 の入力項目)
 - `maintenance_records.previous_device_status`: 修理完了時に戻す端末状態
 - `users.display_name` / `failed_login_count` / `locked_until` / `last_login_at`: 表示名とログイン試行制限
+- `devices.hostname` / `purpose` / `cpu` / `memory` / `disk` / `home_loaned_at` / `recovery` / `initial_user` / `login_user` / `initial_password_enc` / `login_password_enc`: Excel 台帳の項目 (パスワードは暗号化)
 
 ## バックアップと復元
 

@@ -8,8 +8,10 @@ import { DEVICE_STATUS_LABELS } from "@/lib/labels";
 import { pageArgs, type PageQuery } from "@/lib/pagination";
 import type { Prisma } from "@/generated/prisma/client";
 import type { DeviceStatus } from "@/generated/prisma/enums";
+import { decryptSecret, encryptSecret } from "@/lib/crypto/secret";
 import type {
   deviceCreateSchema,
+  deviceCredentialsSchema,
   deviceDeleteSchema,
   deviceStatusChangeSchema,
   deviceUpdateSchema,
@@ -179,6 +181,7 @@ export async function deleteDevice(data: DeleteData, ctx: OperationContext) {
 export const DEVICE_SEARCH_KEYS = [
   "assetNumber",
   "name",
+  "hostname",
   "serial",
   "category",
   "manufacturer",
@@ -203,6 +206,7 @@ export function deviceWhere(query: DeviceSearch, today = todayJst()): Prisma.Dev
   if (query.assetNumber?.trim()) and.push({ assetNumber: contains(query.assetNumber) });
   if (query.name?.trim()) and.push({ name: contains(query.name) });
   if (query.serial?.trim()) and.push({ serialNumber: contains(query.serial) });
+  if (query.hostname?.trim()) and.push({ hostname: contains(query.hostname) });
   if (query.manufacturer?.trim()) and.push({ manufacturer: contains(query.manufacturer) });
   if (Number(query.category) > 0) and.push({ categoryId: Number(query.category) });
   if (Number(query.location) > 0) and.push({ currentLocationId: Number(query.location) });
@@ -297,4 +301,67 @@ export async function getDeviceDetail(id: number) {
     maintenance,
     logs,
   };
+}
+
+// ---------------------------------------------------------------------------
+// 端末のログイン情報 (パスワードは暗号化して保存し、管理者のみ表示できる)
+// ---------------------------------------------------------------------------
+
+export type SecretField = "initialPassword" | "loginPassword";
+
+/** パスワードが登録されているかどうか (暗号文そのものは画面に渡さない) */
+export async function deviceSecretStatus(id: number) {
+  const row = await db.device.findUnique({ where: { id }, select: { initialPasswordEnc: true, loginPasswordEnc: true } });
+  return { initialPassword: Boolean(row?.initialPasswordEnc), loginPassword: Boolean(row?.loginPasswordEnc) };
+}
+
+export async function updateDeviceCredentials(data: z.output<typeof deviceCredentialsSchema>, ctx: OperationContext) {
+  return db.$transaction(async (tx) => {
+    const before = await findEditableDevice(tx, data.id);
+    const passwordUpdate = (plain: string, clear: boolean) => (clear ? null : plain ? encryptSecret(plain) : undefined);
+    const initialPasswordEnc = passwordUpdate(data.initialPassword, data.clearInitialPassword);
+    const loginPasswordEnc = passwordUpdate(data.loginPassword, data.clearLoginPassword);
+    const updated = await tx.device.update({
+      where: { id: before.id },
+      data: { initialUser: data.initialUser, loginUser: data.loginUser, initialPasswordEnc, loginPasswordEnc },
+    });
+    const change = (v: string | null | undefined) => (v === undefined ? "変更なし" : v === null ? "削除" : "変更");
+    // パスワードは監査ログにも残さず、変更の有無だけを記録する
+    await recordAudit(tx, {
+      userId: ctx.user.id,
+      action: "SECRET_UPDATE",
+      entityType: "Device",
+      entityId: before.id,
+      before: { initialUser: before.initialUser, loginUser: before.loginUser },
+      after: {
+        initialUser: updated.initialUser,
+        loginUser: updated.loginUser,
+        initialPasswordChanged: change(initialPasswordEnc),
+        loginPasswordChanged: change(loginPasswordEnc),
+      },
+      ipAddress: ctx.ipAddress,
+    });
+    return updated;
+  });
+}
+
+/** パスワードを復号して返す。表示した事実を操作履歴に記録する */
+export async function revealDeviceSecret(id: number, field: SecretField, ctx: OperationContext) {
+  const row = await db.device.findUnique({
+    where: { id },
+    select: { assetNumber: true, deletedAt: true, initialPasswordEnc: true, loginPasswordEnc: true },
+  });
+  if (!row || row.deletedAt) throw new BusinessRuleError("対象の端末が見つかりません。");
+  const stored = field === "initialPassword" ? row.initialPasswordEnc : row.loginPasswordEnc;
+  if (!stored) throw new BusinessRuleError("パスワードは登録されていません。");
+  const plain = decryptSecret(stored);
+  await recordAudit(db, {
+    userId: ctx.user.id,
+    action: "SECRET_VIEW",
+    entityType: "Device",
+    entityId: id,
+    after: { field: field === "initialPassword" ? "初期ユーザのパスワード" : "ユーザーのパスワード" },
+    ipAddress: ctx.ipAddress,
+  });
+  return plain;
 }

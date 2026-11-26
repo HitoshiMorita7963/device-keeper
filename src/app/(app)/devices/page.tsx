@@ -57,6 +57,7 @@ export default async function DevicesPage({ searchParams }: PageProps<"/devices"
         <SearchText name="assetNumber" label="資産管理番号" defaultValue={params.assetNumber} className="w-full sm:w-40" />
         <SearchText name="name" label="資産名称" defaultValue={params.name} className="w-full sm:w-44" />
         <SearchText name="serial" label="シリアル番号" defaultValue={params.serial} className="w-full sm:w-40" />
+        <SearchText name="hostname" label="ホスト名" defaultValue={params.hostname} className="w-full sm:w-36" />
         <SearchSelect name="category" label="資産種別" defaultValue={params.category} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
         <SearchText name="manufacturer" label="メーカー" defaultValue={params.manufacturer} className="w-full sm:w-36" />
         <SearchText name="user" label="利用者 (氏名・社員番号)" defaultValue={params.user} className="w-full sm:w-44" />

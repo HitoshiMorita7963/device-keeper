@@ -41,6 +41,8 @@ const ACTION_LABELS: Record<string, string> = {
   CSV_EXPORT: "CSVエクスポート",
   PASSWORD_RESET: "パスワード再設定",
   PASSWORD_CHANGE: "パスワード変更",
+  SECRET_VIEW: "端末パスワード表示",
+  SECRET_UPDATE: "端末ログイン情報変更",
 };
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -102,6 +104,19 @@ const FIELD_LABELS: Record<string, string> = {
   numberDigits: "採番桁数",
   role: "権限",
   displayName: "表示名",
+  // Excel 台帳から引き継いだ端末項目
+  hostname: "ホスト名",
+  purpose: "用途",
+  cpu: "CPU",
+  memory: "メモリ",
+  disk: "ディスク",
+  homeLoanedAt: "自宅貸出日",
+  recovery: "リカバリ",
+  initialUser: "初期ユーザ",
+  loginUser: "ユーザー名",
+  field: "対象",
+  initialPasswordChanged: "初期ユーザのPW",
+  loginPasswordChanged: "ユーザーのPW",
   // 貸出・返却・移動
   employee: "利用者",
   location: "拠点",

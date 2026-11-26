@@ -18,6 +18,13 @@ const EMPTY_SPEC = {
   purchaseVendor: "",
   warrantyExpiry: "",
   notes: "",
+  hostname: "",
+  purpose: "",
+  cpu: "",
+  memory: "",
+  disk: "",
+  homeLoanedAt: "",
+  recovery: "",
 };
 
 export function emptyDeviceInput(locationId?: number | null): DeviceCreateInput {
@@ -32,7 +39,10 @@ export function emptyDeviceInput(locationId?: number | null): DeviceCreateInput 
   };
 }
 
-export function toDeviceUpdateInput(d: Device): DeviceUpdateInput {
+/** 暗号化したパスワードの列は通常の取得結果に含まれない */
+type DeviceRow = Omit<Device, "initialPasswordEnc" | "loginPasswordEnc">;
+
+export function toDeviceUpdateInput(d: DeviceRow): DeviceUpdateInput {
   return {
     id: String(d.id),
     assetNumber: d.assetNumber,
@@ -48,6 +58,13 @@ export function toDeviceUpdateInput(d: Device): DeviceUpdateInput {
     purchaseVendor: str(d.purchaseVendor),
     warrantyExpiry: toDateInput(d.warrantyExpiry),
     notes: str(d.notes),
+    hostname: str(d.hostname),
+    purpose: str(d.purpose),
+    cpu: str(d.cpu),
+    memory: str(d.memory),
+    disk: str(d.disk),
+    homeLoanedAt: toDateInput(d.homeLoanedAt),
+    recovery: str(d.recovery),
   };
 }
 

@@ -5,6 +5,7 @@ export type Permission =
   | "dashboard:view"
   | "device:read"
   | "device:write"
+  | "device:secret"
   | "employee:read"
   | "employee:write"
   | "location:read"
@@ -44,6 +45,7 @@ const ALL: readonly Permission[] = [
   "location:write",
   "master:write",
   "disposal:write",
+  "device:secret",
   "user:manage",
   "settings:manage",
 ];
