@@ -44,14 +44,16 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           {description ? <AlertDialogDescription>{description}</AlertDialogDescription> : null}
         </AlertDialogHeader>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border p-3 text-sm">
-          {items.map((item) => (
-            <div key={item.label} className="contents">
-              <dt className="text-muted-foreground">{item.label}</dt>
-              <dd className="break-words">{item.value || "-"}</dd>
-            </div>
-          ))}
-        </dl>
+        {items.length > 0 ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border p-3 text-sm">
+            {items.map((item) => (
+              <div key={item.label} className="contents">
+                <dt className="text-muted-foreground">{item.label}</dt>
+                <dd className="break-words">{item.value || "-"}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
         {children}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>戻る</AlertDialogCancel>

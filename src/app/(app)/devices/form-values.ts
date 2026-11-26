@@ -40,7 +40,7 @@ export function emptyDeviceInput(locationId?: number | null): DeviceCreateInput 
 }
 
 /** 暗号化したパスワードの列は通常の取得結果に含まれない */
-type DeviceRow = Omit<Device, "initialPasswordEnc" | "loginPasswordEnc">;
+type DeviceRow = Omit<Device, "initialPasswordEnc" | "loginPasswordEnc" | "agentTokenHash">;
 
 export function toDeviceUpdateInput(d: DeviceRow): DeviceUpdateInput {
   return {

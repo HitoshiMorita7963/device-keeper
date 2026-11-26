@@ -187,7 +187,7 @@ export async function disposeDevice(data: DisposalData, ctx: OperationContext) {
     const record = await tx.disposalRecord.create({
       data: { ...fields, dataErasureConfirmed: dataErasure === "confirmed", disposedById: ctx.user.id },
     });
-    await tx.device.update({ where: { id: device.id }, data: { status: "DISPOSED", currentEmployeeId: null } });
+    await tx.device.update({ where: { id: device.id }, data: { status: "DISPOSED", currentEmployeeId: null, agentTokenHash: null, agentTokenIssuedAt: null } });
     await recordAudit(tx, {
       userId: ctx.user.id,
       action: "DISPOSE",

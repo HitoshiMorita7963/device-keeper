@@ -11,7 +11,7 @@ export function createDbClient(connectionString: string | undefined = process.en
   }
   return new PrismaClient({
     adapter: new PrismaPg({ connectionString }),
-    omit: { device: { initialPasswordEnc: true, loginPasswordEnc: true } },
+    omit: { device: { initialPasswordEnc: true, loginPasswordEnc: true, agentTokenHash: true } },
   });
 }
 

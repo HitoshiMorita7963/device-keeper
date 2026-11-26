@@ -2,7 +2,7 @@ import type { DbClient } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 
 /** 監査ログに残さない項目 */
-const SECRET_KEYS = new Set(["passwordHash", "password", "token", "initialPasswordEnc", "loginPasswordEnc", "initialPassword", "loginPassword"]);
+const SECRET_KEYS = new Set(["passwordHash", "password", "token", "initialPasswordEnc", "loginPasswordEnc", "initialPassword", "loginPassword", "agentTokenHash"]);
 
 export type AuditInput = {
   userId: number | null;

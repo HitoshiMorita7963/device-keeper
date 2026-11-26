@@ -5,7 +5,8 @@
 
 - 設計書: [docs/design.md](docs/design.md) / [docs/database.md](docs/database.md) / [docs/permissions.md](docs/permissions.md)
 - 開発の進捗・初期リリースの完了条件: [docs/progress.md](docs/progress.md)
-- 運用手順 (利用者登録・バックアップ・復元): [docs/operations.md](docs/operations.md)
+- 運用手順 (利用者登録・Excel 台帳の取り込み・PC名の自動取得・バックアップ・復元): [docs/operations.md](docs/operations.md)
+- Windows 端末の PC 名取得スクリプト: [agent/windows/Send-ComputerName.ps1](agent/windows/Send-ComputerName.ps1)
 
 ## 技術スタック
 

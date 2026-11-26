@@ -170,3 +170,34 @@ describe("画面表示と権限 (本番ビルド)", () => {
     expect(res.headers.get("x-powered-by")).toBeNull();
   });
 });
+
+describe("PC名・管理用端末名 (本番ビルド)", () => {
+  it("PC名送信 API はログイン画面へ転送せず、端末連携キーなしでは 401 を返す", async () => {
+    const res = await fetch(`${BASE}/api/devices/${ids.device}/computer-name`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ computerName: "DESKTOP-E2E" }),
+    });
+    expect(res.status).toBe(401);
+    expect(res.headers.get("www-authenticate")).toContain("Bearer");
+    // ログイン Cookie があっても、端末連携キーがなければ更新できない
+    const withCookie = await fetch(`${BASE}/api/devices/${ids.device}/computer-name`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/json", cookie: `dk_session=${tokens.ADMIN}` },
+      body: JSON.stringify({ computerName: "DESKTOP-E2E" }),
+    });
+    expect(withCookie.status).toBe(401);
+  });
+
+  it("端末一覧・詳細で、未取得の PC 名と未設定の管理用端末名を区別して表示する", async () => {
+    const list = await (await get("/devices", "ASSET_MANAGER")).text();
+    for (const text of ["PC名", "管理用端末名", "未取得", "未設定"]) expect(list).toContain(text);
+    const detail = await (await get(`/devices/${ids.device}`, "ASSET_MANAGER")).text();
+    for (const text of ["自動取得", "手動設定", "管理用端末名を編集"]) expect(detail).toContain(text);
+    // 端末連携キーの発行は管理者のみ表示
+    expect(detail).not.toContain("端末連携キーを発行");
+    expect(await (await get(`/devices/${ids.device}`, "ADMIN")).text()).toContain("端末連携キーを発行");
+  });
+});

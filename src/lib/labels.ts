@@ -43,6 +43,11 @@ const ACTION_LABELS: Record<string, string> = {
   PASSWORD_CHANGE: "パスワード変更",
   SECRET_VIEW: "端末パスワード表示",
   SECRET_UPDATE: "端末ログイン情報変更",
+  MANAGEMENT_NAME_UPDATE: "管理用端末名変更",
+  COMPUTER_NAME_UPDATE: "PC名取得",
+  AGENT_TOKEN_ISSUE: "端末連携キー発行",
+  AGENT_TOKEN_REVOKE: "端末連携キー無効化",
+  AGENT_AUTH_FAILED: "PC名送信の認証失敗",
 };
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -106,6 +111,9 @@ const FIELD_LABELS: Record<string, string> = {
   displayName: "表示名",
   // Excel 台帳から引き継いだ端末項目
   hostname: "ホスト名",
+  computerName: "PC名",
+  managementName: "管理用端末名",
+  reissued: "再発行",
   purpose: "用途",
   cpu: "CPU",
   memory: "メモリ",

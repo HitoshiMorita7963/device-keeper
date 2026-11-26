@@ -11,7 +11,7 @@
 | `employees` | 社員 | `employee_number` 一意、`email` 一意 (任意) |
 | `device_categories` | 資産種別マスタ | `category_code` 一意、`prefix` 一意 |
 | `asset_number_sequences` | 資産管理番号の採番カウンタ (種別ごと) | |
-| `devices` | 端末台帳 (`deleted_at` で論理削除) | `asset_number` 一意 |
+| `devices` | 端末台帳 (`deleted_at` で論理削除)。PC 名 (自動取得)・管理用端末名・端末連携キーのハッシュを含む | `asset_number` 一意、`agent_token_hash` 一意 |
 | `device_assignments` | 貸与履歴 | 未返却 (`returned_at IS NULL`) は端末ごとに 1 件まで (部分ユニークインデックス) |
 | `device_location_history` | 拠点移動履歴 | |
 | `maintenance_records` | 修理・故障履歴 | 対応中 (`status IN (REPORTED, IN_PROGRESS)`) は端末ごとに 1 件まで (部分ユニークインデックス) |

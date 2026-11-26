@@ -4,6 +4,7 @@ import { fieldLabel, formatAuditValue } from "@/lib/labels";
 const HIDDEN_KEYS = new Set([
   "id", "createdAt", "updatedAt", "failedLoginCount", "lockedUntil", "lastLoginAt",
   "assignmentId", "historyId", "maintenanceId", "disposalId", "deviceId",
+  "computerNameUpdatedAt", "managementNameUpdatedAt", "managementNameUpdatedById", "agentTokenIssuedAt",
 ]);
 
 /** 名前を記録している場合は、対応する ID の表示を省く */
