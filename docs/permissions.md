@@ -13,6 +13,7 @@
 | `move:write` | 拠点間移動 | ○ | ○ | |
 | `maintenance:write` | 修理登録 | ○ | ○ | |
 | `disposal:write` | 廃棄処理 | ○ | | |
+| `device:secret` | 端末パスワードの表示・端末ログイン情報の変更 (表示は操作履歴に記録) | ○ | | |
 | `csv:import` / `csv:export` | CSV インポート / エクスポート | ○ / ○ | ○ / ○ | |
 | `audit:read` | 操作履歴の閲覧 | ○ | ○ | |
 | `user:manage` | 利用者の登録・権限変更・無効化・パスワード再設定 | ○ | | |

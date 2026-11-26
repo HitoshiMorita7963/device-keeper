@@ -90,12 +90,13 @@ http://localhost:3000 を開き、初期管理者でログインします。
 | `SESSION_TTL_HOURS` | | セッション有効期間 (既定 12 時間) |
 | `SESSION_COOKIE_SECURE` | | Cookie の Secure 属性 (本番は既定で有効) |
 | `BACKUP_DIR` / `BACKUP_KEEP` | | バックアップの保存先 (既定 `./backups`) / 保持世代数 (既定 30) |
+| `DEVICE_SECRET_KEY` | パスワード保存時 | 端末パスワードの暗号鍵 (32 バイトを base64)。紛失すると保存済みのパスワードは復号できない |
 
 `.env` は Git にコミットしないでください (`.gitignore` 済み)。
 
 ## 本番運用
 
-1. PostgreSQL を用意し、`.env` の `DATABASE_URL` を設定します (開発用の `db:start` は本番で使わない)。
+1. PostgreSQL を用意し、`.env` の `DATABASE_URL` を設定します (開発用の `db:start` は本番で使わない)。端末のパスワードを保存する場合は `DEVICE_SECRET_KEY` も設定します (生成方法は `.env.example`)。
 2. `npm ci` → `npm run db:deploy` (マイグレーション適用) → `npm run db:seed` (初回のみ) → `npm run build` → `npm start`
 3. HTTPS 終端 (リバースプロキシ等) の後ろで公開します。HTTP のみでの公開はしないでください。
 4. 初期管理者でログインし、ヘッダーの鍵アイコンからパスワードを変更します。

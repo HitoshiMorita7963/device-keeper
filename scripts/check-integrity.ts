@@ -3,8 +3,7 @@
 //   npm run db:check -- --url <接続文字列>    … 指定した DB を確認
 // エラーがあれば終了コード 1 を返す。
 import "dotenv/config";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { createDbClient } from "../src/lib/db";
 import { checkIntegrity } from "../src/server/integrity";
 
 const urlIndex = process.argv.indexOf("--url");
@@ -14,7 +13,7 @@ if (!connectionString) {
   process.exit(1);
 }
 
-const client = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const client = createDbClient(connectionString);
 
 async function main() {
   const [issues, counts] = await Promise.all([

@@ -16,8 +16,9 @@ import { requirePermission } from "@/lib/auth/session";
 import { formatDate, formatDateTime, todayJst } from "@/lib/dates";
 import { actionLabel, MAINTENANCE_STATUS_LABELS } from "@/lib/labels";
 import { idParam } from "@/lib/validation/common";
-import { getDeviceDetail } from "@/server/devices";
+import { deviceSecretStatus, getDeviceDetail } from "@/server/devices";
 import { OPEN_MAINTENANCE } from "@/server/maintenance";
+import { CredentialsCard } from "./credentials-card";
 import { DeleteDeviceDialog, StatusChangeDialog } from "./device-dialogs";
 
 export const metadata: Metadata = { title: "端末詳細" };
@@ -30,6 +31,7 @@ export default async function DeviceDetailPage({ params }: PageProps<"/devices/[
   const detail = id.success ? await getDeviceDetail(id.data) : null;
   if (!detail) notFound();
   const { device, currentAssignment, assignments, moves, maintenance, logs } = detail;
+  const secretStatus = await deviceSecretStatus(device.id);
   const today = todayJst();
   const disposed = device.status === "DISPOSED";
   const canWrite = can(user.role, "device:write") && !disposed;
@@ -149,10 +151,15 @@ export default async function DeviceDetailPage({ params }: PageProps<"/devices/[
                   { label: "資産名称", value: device.name },
                   { label: "資産種別", value: device.category.name },
                   { label: "メーカー", value: device.manufacturer },
-                  { label: "型番", value: device.model },
+                  { label: "型番 (機種名)", value: device.model },
                   { label: "シリアル番号", value: device.serialNumber && <span className="font-mono">{device.serialNumber}</span> },
+                  { label: "ホスト名", value: device.hostname && <span className="font-mono">{device.hostname}</span> },
+                  { label: "用途", value: device.purpose },
                   { label: "OS", value: device.osName },
                   { label: "OSバージョン", value: device.osVersion },
+                  { label: "CPU", value: device.cpu },
+                  { label: "メモリ", value: device.memory },
+                  { label: "ディスク", value: device.disk },
                   { label: "現在拠点", value: <Link href={`/locations/${device.currentLocation.id}`} className="hover:underline">{device.currentLocation.name}</Link> },
                   { label: "端末状態", value: <DeviceStatusBadge status={device.status} /> },
                   { label: "購入日", value: formatDate(device.purchaseDate) },
@@ -167,6 +174,8 @@ export default async function DeviceDetailPage({ params }: PageProps<"/devices/[
                       </span>
                     ),
                   },
+                  { label: "自宅貸出日", value: formatDate(device.homeLoanedAt) },
+                  { label: "リカバリ", value: device.recovery },
                   { label: "登録日時", value: formatDateTime(device.createdAt) },
                   { label: "更新日時", value: formatDateTime(device.updatedAt) },
                 ]}
@@ -179,6 +188,16 @@ export default async function DeviceDetailPage({ params }: PageProps<"/devices/[
               ) : null}
             </CardContent>
           </Card>
+          <div className="mt-4">
+            <CredentialsCard
+              deviceId={device.id}
+              initialUser={device.initialUser}
+              loginUser={device.loginUser}
+              registered={secretStatus}
+              canManage={can(user.role, "device:secret")}
+              editable={!disposed}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="assignment">

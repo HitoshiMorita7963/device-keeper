@@ -68,7 +68,11 @@ function SpecFields() {
     <>
       <FormRow>
         <TextField name="manufacturer" label="メーカー" maxLength={100} />
-        <TextField name="model" label="型番" maxLength={100} />
+        <TextField name="model" label="型番 (機種名)" maxLength={100} />
+      </FormRow>
+      <FormRow>
+        <TextField name="hostname" label="ホスト名" maxLength={100} className="font-mono" />
+        <TextField name="purpose" label="用途" maxLength={100} placeholder="例: 営業用・開発用・会議室用" />
       </FormRow>
       <FormRow cols={3}>
         <TextField name="serialNumber" label="シリアル番号" maxLength={100} className="sm:col-span-1" />
@@ -82,7 +86,14 @@ function SpecFields() {
         <TextField name="purchaseVendor" label="購入先" maxLength={100} />
       </FormRow>
       <FormRow cols={3}>
-        <TextField name="warrantyExpiry" label="保証期限" type="date" />
+        <TextField name="cpu" label="CPU" maxLength={100} />
+        <TextField name="memory" label="メモリ" maxLength={50} placeholder="例: 16GB" />
+        <TextField name="disk" label="ディスク" maxLength={50} placeholder="例: SSD 512GB" />
+      </FormRow>
+      <FormRow cols={3}>
+        <TextField name="warrantyExpiry" label="保証期限 (サポート)" type="date" />
+        <TextField name="homeLoanedAt" label="自宅貸出日" type="date" description="在宅勤務等で自宅へ持ち帰った日" />
+        <TextField name="recovery" label="リカバリ" maxLength={200} description="初期化 (リカバリ) の実施状況など" />
       </FormRow>
       <TextareaField name="notes" label="備考" />
     </>

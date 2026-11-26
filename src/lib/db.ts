@@ -1,18 +1,26 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
-function createClient() {
-  const connectionString = process.env.DATABASE_URL;
+/**
+ * アプリ・スクリプト共通の Prisma クライアントを作る。
+ * 暗号化したパスワードは既定で取得しない。必要な処理 (管理者による表示) でのみ明示的に選択する。
+ */
+export function createDbClient(connectionString: string | undefined = process.env.DATABASE_URL) {
   if (!connectionString) {
     throw new Error("環境変数 DATABASE_URL が設定されていません。.env.example を参考に設定してください。");
   }
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  return new PrismaClient({
+    adapter: new PrismaPg({ connectionString }),
+    omit: { device: { initialPasswordEnc: true, loginPasswordEnc: true } },
+  });
 }
 
-// 開発時のホットリロードで接続が増え続けないよう、グローバルに 1 つだけ保持する
-const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof createClient> };
+export type AppPrismaClient = ReturnType<typeof createDbClient>;
 
-export const db = globalForPrisma.prisma ?? createClient();
+// 開発時のホットリロードで接続が増え続けないよう、グローバルに 1 つだけ保持する
+const globalForPrisma = globalThis as unknown as { prisma?: AppPrismaClient };
+
+export const db = globalForPrisma.prisma ?? createDbClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
 

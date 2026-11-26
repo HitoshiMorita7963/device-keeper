@@ -35,6 +35,8 @@ async function devicesCsv(query: DeviceSearch, byLocation: boolean) {
     "資産管理番号", "資産名称", "資産種別", "メーカー", "型番", "シリアル番号", "OS", "OSバージョン",
     "購入日", "購入金額", "購入先", "保証期限", "現在拠点", "端末状態",
     "利用者社員番号", "利用者氏名", "利用者部署", "貸出日", "返却予定日", "備考",
+    // パスワードは出力しない (暗号化して保存し、管理者が画面でのみ確認する)
+    "ホスト名", "用途", "CPU", "メモリ", "ディスク", "自宅貸出日", "リカバリ", "初期ユーザ", "ユーザー名",
   ];
   const rows = devices.map((d) => {
     const open = d.assignments[0];
@@ -45,6 +47,7 @@ async function devicesCsv(query: DeviceSearch, byLocation: boolean) {
       DEVICE_STATUS_LABELS[d.status],
       d.currentEmployee?.employeeNumber, d.currentEmployee?.name, d.currentEmployee?.department?.name,
       date(open?.assignedAt), date(open?.expectedReturnAt), d.notes,
+      d.hostname, d.purpose, d.cpu, d.memory, d.disk, date(d.homeLoanedAt), d.recovery, d.initialUser, d.loginUser,
     ];
   });
   return { csv: toCsv(headers, rows), count: rows.length };

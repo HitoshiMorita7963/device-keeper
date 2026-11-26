@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { optionalAmount, optionalDate, optionalText, requiredId, requiredText } from "./common";
 
-/** 資産管理番号: 半角英数字とハイフン (例: PC-000001) */
+/** 資産管理番号: 半角英数字とハイフン等 (例: PC-000001)。Excel 台帳の既存番号も取り込めるよう _ と . も許可する */
 const assetNumberText = z
   .string()
   .trim()
   .toUpperCase()
   .max(30, "30文字以内で入力してください。")
-  .refine((v) => v === "" || /^[A-Z0-9][A-Z0-9-]*$/.test(v), "資産管理番号は半角英数字とハイフンで入力してください。");
+  .refine((v) => v === "" || /^[A-Z0-9][A-Z0-9._-]*$/.test(v), "資産管理番号は半角英数字とハイフン・アンダースコア・ピリオドで入力してください。");
 
 /** 登録・編集で共通の項目 */
 const deviceFields = {
@@ -23,6 +23,14 @@ const deviceFields = {
   purchaseVendor: optionalText(100),
   warrantyExpiry: optionalDate,
   notes: optionalText(1000),
+  // Excel 台帳から引き継いだ項目 (未指定の場合は変更しない)
+  hostname: optionalText(100).optional(),
+  purpose: optionalText(100).optional(),
+  cpu: optionalText(100).optional(),
+  memory: optionalText(50).optional(),
+  disk: optionalText(50).optional(),
+  homeLoanedAt: optionalDate.optional(),
+  recovery: optionalText(200).optional(),
 };
 
 /**
@@ -67,6 +75,18 @@ export const deviceDeleteSchema = z.object({
   reason: requiredText("削除理由", 500),
 });
 
+/** 端末のログイン情報 (管理者のみ変更可)。パスワード欄が空欄の場合は変更しない */
+export const deviceCredentialsSchema = z.object({
+  id: requiredId("端末"),
+  initialUser: optionalText(100),
+  loginUser: optionalText(100),
+  initialPassword: z.string().max(200, "200文字以内で入力してください。"),
+  loginPassword: z.string().max(200, "200文字以内で入力してください。"),
+  clearInitialPassword: z.boolean(),
+  clearLoginPassword: z.boolean(),
+});
+
+export type DeviceCredentialsInput = z.input<typeof deviceCredentialsSchema>;
 export type DeviceCreateInput = z.input<typeof deviceCreateSchema>;
 export type DeviceUpdateInput = z.input<typeof deviceUpdateSchema>;
 export type DeviceStatusChangeInput = z.input<typeof deviceStatusChangeSchema>;

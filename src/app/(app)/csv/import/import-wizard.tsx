@@ -17,11 +17,42 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { decodeCsvBytes } from "@/lib/csv/decode";
 import { guessMapping, IMPORT_LIMITS, IMPORT_TARGETS, requiredMappingFields, type ImportMode, type ImportTarget } from "@/lib/csv/fields";
 import { cn } from "@/lib/utils";
-import type { ImportSummary, RowAction, RowResult } from "@/server/csv-import";
+import type { AutoCreated, ImportSummary, RowAction, RowResult } from "@/server/csv-import";
 import { executeImportAction, previewImportAction } from "../actions";
 
 type Parsed = { fileName: string; encoding: string; headers: string[]; rows: string[][] };
-type Preview = { summary: ImportSummary; rows: RowResult[] };
+type Preview = { summary: ImportSummary; rows: RowResult[]; autoCreated: AutoCreated };
+
+/** パスワードの列 (管理者のみ取り込み可) */
+const SECRET_FIELDS = new Set(["initialPassword", "loginPassword"]);
+
+/** 自動登録されるマスタの一覧 */
+function AutoCreatedList({ autoCreated }: { autoCreated: AutoCreated }) {
+  const groups = [
+    { label: "社員", items: autoCreated.employees },
+    { label: "部署", items: autoCreated.departments },
+    { label: "拠点", items: autoCreated.locations },
+  ].filter((g) => g.items.length > 0);
+  if (groups.length === 0) return null;
+  return (
+    <Alert>
+      <AlertTitle>次のデータを新規登録します</AlertTitle>
+      <AlertDescription>
+        <dl className="mt-1 flex flex-col gap-1">
+          {groups.map((g) => (
+            <div key={g.label}>
+              <dt className="inline font-medium">
+                {g.label} ({g.items.length} 件):{" "}
+              </dt>
+              <dd className="inline">{g.items.join("、")}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-2 text-xs">社員番号・拠点コード・部署コードは仮の番号です。登録後に各管理画面で正式な値に変更できます。</p>
+      </AlertDescription>
+    </Alert>
+  );
+}
 
 const ACTION_LABEL: Record<RowAction, string> = { create: "登録", update: "更新", skip: "スキップ", error: "エラー" };
 const ACTION_CLASS: Record<RowAction, string> = {
@@ -78,7 +109,19 @@ function SummaryCards({ summary, filter, onFilter }: { summary: ImportSummary; f
   );
 }
 
-export function ImportWizard({ targets }: { targets: ImportTarget[] }) {
+export function ImportWizard({
+  targets,
+  categories,
+  canAutoCreate,
+  canImportSecrets,
+}: {
+  targets: ImportTarget[];
+  categories: { id: number; name: string }[];
+  /** 社員・部署・拠点を自動登録できるか (管理者のみ) */
+  canAutoCreate: boolean;
+  /** パスワードの列を取り込めるか (管理者のみ) */
+  canImportSecrets: boolean;
+}) {
   const [target, setTarget] = useState<ImportTarget>(targets[0]);
   const [mode, setMode] = useState<ImportMode>("skip");
   const [parsed, setParsed] = useState<Parsed | null>(null);
@@ -89,13 +132,27 @@ export function ImportWizard({ targets }: { targets: ImportTarget[] }) {
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState<ImportSummary | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [defaultCategoryId, setDefaultCategoryId] = useState("");
+  const [autoCreate, setAutoCreate] = useState(false);
 
   const definition = IMPORT_TARGETS[target];
-  const request = useMemo(
-    () => (parsed ? { target, mode, headers: parsed.headers, rows: parsed.rows, mapping } : null),
-    [target, mode, parsed, mapping],
+  const options = useMemo(
+    () => ({ defaultCategoryId: target === "devices" && defaultCategoryId ? Number(defaultCategoryId) : null, autoCreate: target === "devices" && autoCreate }),
+    [target, defaultCategoryId, autoCreate],
   );
-  const requiredKeys = new Set(requiredMappingFields(target, mode).map((f) => f.key));
+  const request = useMemo(
+    () => (parsed ? { target, mode, headers: parsed.headers, rows: parsed.rows, mapping, options } : null),
+    [target, mode, parsed, mapping, options],
+  );
+  const requiredKeys = new Set(requiredMappingFields(target, mode, options).map((f) => f.key));
+  const secretLocked = (key: string) => target === "devices" && SECRET_FIELDS.has(key) && !canImportSecrets;
+
+  /** 見出しから対応付けを推定する。パスワードを扱えない利用者はパスワードの列を対応付けない */
+  function initialMapping(t: ImportTarget, headers: string[]) {
+    const guessed = guessMapping(t, headers);
+    if (t === "devices" && !canImportSecrets) for (const k of SECRET_FIELDS) guessed[k] = null;
+    return guessed;
+  }
   const missingRequired = definition.fields.filter((f) => requiredKeys.has(f.key) && (mapping[f.key] === null || mapping[f.key] === undefined));
 
   function reset() {
@@ -112,7 +169,7 @@ export function ImportWizard({ targets }: { targets: ImportTarget[] }) {
     try {
       const data = await readCsvFile(file);
       setParsed(data);
-      setMapping(guessMapping(target, data.headers));
+      setMapping(initialMapping(target, data.headers));
     } catch (e) {
       setFileError(e instanceof Error ? e.message : "ファイルを読み込めませんでした。");
     }
@@ -143,7 +200,7 @@ export function ImportWizard({ targets }: { targets: ImportTarget[] }) {
     }
     toast.success(result.message);
     setDone(result.data.summary);
-    setPreview({ summary: result.data.summary, rows: result.data.rows });
+    setPreview({ summary: result.data.summary, rows: result.data.rows, autoCreated: result.data.autoCreated });
   }
 
   const rows = preview?.rows.filter((r) => filter === "all" || r.action === filter) ?? [];
@@ -172,7 +229,7 @@ export function ImportWizard({ targets }: { targets: ImportTarget[] }) {
                   const next = e.target.value as ImportTarget;
                   setTarget(next);
                   reset();
-                  if (parsed) setMapping(guessMapping(next, parsed.headers));
+                  if (parsed) setMapping(initialMapping(next, parsed.headers));
                 }}
               >
                 {targets.map((t) => (
@@ -216,6 +273,59 @@ export function ImportWizard({ targets }: { targets: ImportTarget[] }) {
             </label>
           </fieldset>
 
+          {target === "devices" ? (
+            <div className="grid gap-4 rounded-lg border bg-muted/30 p-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="default-category">資産種別</Label>
+                <NativeSelect
+                  id="default-category"
+                  className="w-full"
+                  value={defaultCategoryId}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setDefaultCategoryId(e.target.value);
+                    reset();
+                  }}
+                >
+                  <NativeSelectOption value="">CSV の「資産種別」列で指定する</NativeSelectOption>
+                  {categories.map((c) => (
+                    <NativeSelectOption key={c.id} value={String(c.id)}>
+                      すべて「{c.name}」として登録
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+                <span className="text-xs text-muted-foreground">
+                  台帳に種別の列がない場合はここで選びます。種別の違う端末は、ファイルを分けて取り込んでください。
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium">社員・部署・拠点の自動登録</span>
+                {canAutoCreate ? (
+                  <label className="flex items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={autoCreate}
+                      disabled={busy}
+                      onChange={(e) => {
+                        setAutoCreate(e.target.checked);
+                        reset();
+                      }}
+                      className="mt-1 accent-primary"
+                    />
+                    <span>
+                      見つからない社員・部署・拠点を自動登録する
+                      <span className="block text-xs text-muted-foreground">
+                        利用者は氏名で照合し、見つからない場合は仮の社員番号で登録します。登録される内容はプレビューで確認できます。
+                      </span>
+                    </span>
+                  </label>
+                ) : (
+                  <span className="text-xs text-muted-foreground">自動登録は管理者のみ行えます。社員・拠点は事前に登録しておいてください。</span>
+                )}
+              </div>
+            </div>
+          ) : null}
+
           {fileError ? (
             <Alert variant="destructive">
               <CircleAlert aria-hidden />
@@ -250,14 +360,18 @@ export function ImportWizard({ targets }: { targets: ImportTarget[] }) {
                       <TableCell className="whitespace-normal">
                         <span className="font-medium">{f.label}</span>
                         {requiredKeys.has(f.key) ? <span className="ml-2 text-xs text-destructive">必須</span> : null}
-                        {f.hint ? <span className="block text-xs text-muted-foreground">{f.hint}</span> : null}
+                        {secretLocked(f.key) ? (
+                          <span className="block text-xs text-muted-foreground">パスワードは管理者のみ取り込めます</span>
+                        ) : f.hint ? (
+                          <span className="block text-xs text-muted-foreground">{f.hint}</span>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         <NativeSelect
                           aria-label={`${f.label}に対応する列`}
                           className="w-48"
                           value={index === null || index === undefined ? "" : String(index)}
-                          disabled={busy}
+                          disabled={busy || secretLocked(f.key)}
                           aria-invalid={requiredKeys.has(f.key) && (index === null || index === undefined)}
                           onChange={(e) => {
                             setMapping({ ...mapping, [f.key]: e.target.value === "" ? null : Number(e.target.value) });
@@ -328,6 +442,8 @@ export function ImportWizard({ targets }: { targets: ImportTarget[] }) {
                 </AlertDescription>
               </Alert>
             ) : null}
+
+            <AutoCreatedList autoCreated={preview.autoCreated} />
 
             <SummaryCards summary={preview.summary} filter={filter} onFilter={setFilter} />
 
